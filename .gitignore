@@ -133,3 +133,8 @@ Temporary Items
 
 # PyCharm
 **/.idea/**/*
+
+
+# data
+pages/
+
