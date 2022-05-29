@@ -2,8 +2,13 @@ import math
 import argparse
 import linecache
 from collections import Counter
-from english_indexer import *
+import sys
 
+from search.english_indexer import *
+from utils.checker import Checker
+from utils.ranker import Ranker
+
+print(sys.path)
 
 '''
 This class traverses various index files and return the required data
@@ -15,10 +20,10 @@ class FileTraverser():
 		pass
 
 	def binary_search_token_info(self, high, filename, inp_token):
-		
+
 		low = 0
 		while low < high:
-			
+
 			mid = (low + high)//2
 			line = linecache.getline(filename, mid)
 			token = line.split('-')[0]
@@ -26,10 +31,10 @@ class FileTraverser():
 			if inp_token == token:
 				token_info = line.split('-')[1:-1]
 				return token_info
-			
+
 			elif inp_token > token:
 				low = mid + 1
-			
+
 			else:
 				high = mid
 
@@ -44,7 +49,7 @@ class FileTraverser():
 
 
 	def search_field_file(self, field, file_num, line_num):
-		
+
 		if line_num != '':
 			line = linecache.getline(f'../data/index/{field}_data_{str(file_num)}.txt', int(line_num)).strip()
 			postings = line.split('-')[1]
@@ -83,36 +88,6 @@ class FileTraverser():
 
 
 '''
-This class implements the ranking functionality on the returned postings.
-'''
-class Ranker():
-
-	def __init__(self, num_pages):
-
-		self.num_pages = num_pages
-
-	def do_ranking(self, page_freq, page_postings):
-		# page freq for idf, page postings for tf
-		
-		result = defaultdict(float)
-		weightage_dict = {'title':1.0, 'body':0.6, 'category':0.4, 'infobox':0.75, 'link':0.20, 'reference':0.25}
-		
-		for token, field_post_dict in page_postings.items():
-			
-			for field, postings in field_post_dict.items():
-				
-				weightage = weightage_dict[field]
-				
-				if len(postings)>0:
-					for post in postings.split(';'):
-						
-						id, post = post.split(':')
-						result[id] += weightage*(1+math.log(int(post)))*math.log((self.num_pages-int(page_freq[token]))/int(page_freq[token]))
-
-		return result
-
-
-'''
 This class takes query as input and returns the corresponding postings along with theis fields
 '''
 class QueryResults():
@@ -124,7 +99,7 @@ class QueryResults():
 	def simple_query(self, preprocessed_query):
 
 		page_freq, page_postings = {}, defaultdict(dict)
-		
+
 		for token in preprocessed_query:
 			token_info = self.file_traverser.get_token_info(token)
 
@@ -135,7 +110,7 @@ class QueryResults():
 					}
 
 				for field_name, line_num in line_map.items():
-					
+
 					if line_num!='':
 						posting = self.file_traverser.search_field_file(field_name, file_num, line_num)
 
@@ -177,15 +152,16 @@ This class runs the above functions to implement search and ranking and returns 
 '''
 class RunQuery():
 
-	def __init__(self, text_pre_processor, file_traverser, ranker, query_results):
+	def __init__(self, text_pre_processor, file_traverser, ranker, query_results, spell_checker):
 
 		self.file_traverser = file_traverser
 		self.text_pre_processor = text_pre_processor
 		self.ranker = ranker
 		self.query_results = query_results
+		self.spell_checker = spell_checker
 
 	def identify_query_type(self, query):
-		
+
 		field_replace_map = {
 				' t:':';t:',
 				' b:':';b:',
@@ -233,12 +209,17 @@ class RunQuery():
 					preprocessed_query_final.append([field, word])
 
 			page_freq, page_postings = self.query_results.field_query(preprocessed_query_final)
-		
+
 		else:
-			
+
 			page_freq, page_postings = self.query_results.simple_query(preprocessed_query)
 
-		ranked_results = self.ranker.do_ranking(page_freq, page_postings)
+		ranked_results = self.ranker.tfidf_rank(
+			page_freq,
+			page_postings,
+			use_cosine=False,
+			use_cate_generality=False
+		)
 
 		return ranked_results
 
@@ -251,6 +232,9 @@ class RunQuery():
 				s = time.time()
 
 				query = query.strip()
+				query = self.spell_checker.query_spell_check(query)
+				print('After spell correction:- {}'.format(query))
+
 				query1, query2 = self.identify_query_type(query)
 
 				if query2:
@@ -322,6 +306,9 @@ class RunQuery():
 			s = time.time()
 
 			query = query.strip()
+			query = self.spell_checker.query_spell_check(query)
+			print('After spell correction:- {}'.format(query))
+
 			query1, query2 = self.identify_query_type(query)
 
 			if query2:
@@ -367,7 +354,7 @@ class RunQuery():
 This is the main function which does entire searching task.
 '''
 if __name__=='__main__':
-	
+
 	start = time.time()
 
 	arg_parser = argparse.ArgumentParser()
@@ -390,8 +377,9 @@ if __name__=='__main__':
 	text_pre_processor = TextPreProcessor(html_tags, stemmer, stop_words)
 	file_traverser = FileTraverser()
 	ranker = Ranker(num_pages)
+	spell_checker = Checker()
 	query_results = QueryResults(file_traverser)
-	run_query = RunQuery(text_pre_processor, file_traverser, ranker, query_results)
+	run_query = RunQuery(text_pre_processor, file_traverser, ranker, query_results, spell_checker)
 
 	temp = linecache.getline('../data/index/id_title_map.txt', 0)
 
@@ -400,14 +388,14 @@ if __name__=='__main__':
 	print('Starting Querying')
 
 	start = time.time()
-	
+
 	if file_name is not None:
 
 		run_query.take_input_from_file(file_name, num_results)
-	
+
 	else:
 
 		run_query.take_input_from_user(num_results)
 
-	
+
 	print('Done querying in', time.time() - start, 'seconds')
