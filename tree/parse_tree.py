@@ -5,11 +5,12 @@ import argparse
 import linecache
 import time
 import pickle
+from tqdm import tqdm
 
 import numpy as np
 
 from tree_utils import backtrack, calc_tree_size, calc_node_num
-from mysql_utils import mysql_connect, mysql_fetch_main_topic_id
+from mysql_utils import mysql_connect, mysql_fetch_main_topic_id, mysql_fetch_page_title
 
 
 num_cat = 0
@@ -31,6 +32,14 @@ def load_obj(path):
         return pickle.load(f)
 
 
+def save_wikiid_title_map(cursor, category_tree, save_folder):
+    wikiid_list = sorted(category_tree.keys(), key=lambda wikiid: str(wikiid))
+    with open(osp.join(save_folder, "wikiid_title_map.txt"), "w") as f:
+        for wikiid in tqdm(wikiid_list):
+            title = mysql_fetch_page_title(cursor, wikiid)
+            f.write(f"{wikiid}-{title}\n")
+    return
+
 class WriteTree(object):
     def __init__(self, save_folder):
         self.save_folder = save_folder
@@ -51,6 +60,8 @@ class WriteTree(object):
         with open(osp.join(self.save_folder, f"cat_postings_id_info.txt"), "w") as f:
             for data in write_data:
                 f.write(f"{'-'.join(data)}\n")
+        with open(osp.join(self.save_folder, f"cat_postings_nline.txt"), "w") as f:
+            f.write(f"{len(write_data)}\n")
 
     def write_descendent_buffer(self):
         global descendent_buffer, num_file, wikiid_tmpid_map
@@ -68,6 +79,8 @@ class WriteTree(object):
         with open(osp.join(self.save_folder, f"descendents_id_info.txt"), "w") as f:
             for data in write_data:
                 f.write(f"{'-'.join(data)}\n")
+        with open(osp.join(self.save_folder, f"descendents_nline.txt"), "w") as f:
+            f.write(f"{len(write_data)}\n")
 
     def write_shortest_path_buffer(self):
         global shortest_paths_buffer, num_file, wikiid_tmpid_map
@@ -89,6 +102,8 @@ class WriteTree(object):
         with open(osp.join(self.save_folder, f"shortest_paths_id_info.txt"), "w") as f:
             for data in write_data:
                 f.write(f"{'-'.join(data)}\n")
+        with open(osp.join(self.save_folder, f"shortest_paths_nline.txt"), "w") as f:
+            f.write(f"{len(write_data)}\n")
 
 
 class TreeParser(object):
@@ -136,11 +151,11 @@ class TreeParser(object):
 
         return self.category_tree
 
-    def save_tree(self):
+    def save_tree(self, save_name="raw.bin"):
         if self.category_tree is None:
             print("Please initialize the tree by calling 'get_tree'.")
             return
-        save_obj(self.category_tree, osp.join(self.output_folder, "raw.bin"))
+        save_obj(self.category_tree, osp.join(self.output_folder, save_name))
 
     def prune_tree(self):
         self.is_valid = {}
@@ -173,6 +188,7 @@ class TreeParser(object):
               f"| # non-leaf node: {calc_node_num(self.category_tree)}->{calc_node_num(category_tree_pruned)}.")
 
         self.category_tree = category_tree_pruned
+        self.save_tree("pruned.bin")
         return self.category_tree
 
     def _check_category_validity(self, id):
@@ -454,6 +470,7 @@ if __name__ == '__main__':
     tree_parser.save_category_postings()
     tree_parser.save_page_categories()
     tree_parser.save_shortest_path()
+    save_wikiid_title_map(cursor, tree_parser.category_tree, args.save_folder)
 
 
 

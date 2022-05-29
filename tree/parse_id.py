@@ -46,6 +46,23 @@ class WriteData():
             f.write('\n'.join(temp_id_wikiid))
             f.write('\n')
 
+    def write_wikiid_title_map(self):
+
+        global pageid_title_map, pageid_wikiid_map
+        temp_wikiid_title = []
+
+        temp_wikiid_title_map = sorted([(pageid_wikiid_map[id], pageid_title_map[id])
+                                    for id in pageid_wikiid_map.keys()],
+                                   key=lambda item: str(item[0]))
+
+        for id, title in tqdm(temp_wikiid_title_map):
+            t = str(id) + '-' + title.strip()
+            temp_wikiid_title.append(t)
+
+        with open(osp.join(self.save_folder, "wikiid_title_map.txt"), 'a') as f:  # append mode
+            f.write('\n'.join(temp_wikiid_title))
+            f.write('\n')
+
 
 class WikiIdParser(xml.sax.ContentHandler):
 
@@ -83,6 +100,7 @@ class WikiIdParser(xml.sax.ContentHandler):
                 # write to file
                 self.write_data.write_id_title_map()
                 self.write_data.write_id_wikiid_map()
+                self.write_data.write_wikiid_title_map()
                 pageid_title_map = {}
                 pageid_wikiid_map = {}
 
@@ -129,6 +147,7 @@ if __name__ == '__main__':
 
     write_data.write_id_title_map()
     write_data.write_id_wikiid_map()
+    write_data.write_wikiid_title_map()
 
     print("num pages:", num_pages)
 
