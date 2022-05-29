@@ -13,6 +13,8 @@ class CategoryInfo(object):
         if not osp.exists(osp.join(self.data_folder, "tree", "processed_cat_postings")):
             os.makedirs(osp.join(self.data_folder, "tree", "processed_cat_postings"))
             self._process_category_postings()
+        if not osp.exists(osp.join(self.data_folder, "index", "id_generality_map.txt")):
+            self._process_page_generatlity()
 
     def _binary_search_wikiid(self, inp_wikiid, high, filename):
 
@@ -143,7 +145,6 @@ class CategoryInfo(object):
         _, file_num, line_num = paths_line.split("-")
         file_num = int(file_num)
         line_num = int(line_num)
-        print(file_num, line_num)
 
         paths = linecache.getline(osp.join(self.data_folder, "tree", f"shortest_paths_{file_num}.txt"),
                                            line_num + 1).strip()
@@ -155,11 +156,11 @@ class CategoryInfo(object):
             path_ = []
             for node in path:
                 category_name = self._binary_search_wikiid(str(node), high,
-                                osp.join(self.data_folder, "tree", "wikiid_title_map.txt")).strip()
+                                osp.join(self.data_folder, "tree", "wikiid_title_map.txt"))
                 if category_name is None:
                     continue
                 else:
-                    path_.append(category_name.split("-", 1)[1])
+                    path_.append(category_name.strip().split("-", 1)[1])
             paths[i] = path_[::-1]
         return paths
 
@@ -231,6 +232,31 @@ class CategoryInfo(object):
                 processed.write(str(wikiid) + "-" + ";".join([str(pageid) for pageid in pageids]) + "\n")
 
             original.close()
+
+    def _process_page_generatlity(self):
+        # the page generality is defined as the length of its shortest path to a main topic
+        print("Processing page generality ...")
+        id_title_map_file = open(osp.join(self.data_folder, "index", "id_title_map.txt"), "r")
+        id_generatlity_map_file = open(osp.join(self.data_folder, "index", "id_generality_map.txt"), "w")
+
+        while True:
+
+            line = id_title_map_file.readline().strip()
+
+            if len(line) == 0:
+                break
+
+            pageid = int(line.split("-")[0])
+            paths = self.get_page_category_hierarchy(page_id=pageid)
+            if len(paths) == 0:
+                generality = 100
+            else:
+                generality = min([len(path) for path in paths])
+
+            id_generatlity_map_file.write(f"{pageid}-{generality}\n")
+
+        id_title_map_file.close()
+        id_generatlity_map_file.close()
 
 
 if __name__ == '__main__':
