@@ -13,6 +13,7 @@ index_map = defaultdict(str)
 num_files = 0
 num_pages = 0
 id_title_map = {}
+id_num_tokens_map = {}
 
 '''
 This class takes the raw text as input and returns the preprocessed text the list of words.
@@ -508,6 +509,8 @@ class XMLParser(xml.sax.ContentHandler):
 
             id_title_map[num_pages] = self.title.lower()  # doc_id: title string
             title, body, category, infobox, link, reference = self.page_processor.process_page(self.title, self.text)
+            id_num_tokens_map[num_pages] = len(body)
+            print(body)
 
             self.create_index.index(title, body, category, infobox, link, reference)  # create index when preprocessing
 
@@ -649,6 +652,11 @@ if __name__ == '__main__':
 
     with open('../data/index/num_tokens.txt', 'w') as f:
         f.write(str(num_tokens_final))
+
+    with open('../data/index/num_page_tokens.txt', 'w') as f:
+        id_num_tokens_list = sorted(list(id_num_tokens_map.items()), key=lambda x: x[0])
+        for id, num_tokens in id_num_tokens_list:
+            f.write(f'{id}-{num_tokens}\n')
 
     char_list = [chr(i) for i in range(97, 123)]
     num_list = [str(i) for i in range(0, 10)]

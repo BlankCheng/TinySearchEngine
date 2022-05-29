@@ -198,7 +198,6 @@ class RunQuery():
             preprocessed_query = self.text_pre_processor.preprocess_text(query)
 
         if query_type == 'field':
-
             preprocessed_query_final = []
             for field, words in preprocessed_query:
                 for word in words:
@@ -208,8 +207,11 @@ class RunQuery():
         else:
             page_freq, page_postings = self.query_results.simple_query(preprocessed_query)
 
-        ranked_results = self.ranker.tfidf_rank(page_freq, page_postings)
-
+        ranked_results = self.ranker.rank(
+            method='weighted_field_tf_idf',
+            page_freq=page_freq,
+            page_postings=page_postings
+        )
         return ranked_results
 
     def take_input_from_file(self, file_name, num_results):
