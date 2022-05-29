@@ -61,7 +61,7 @@ if __name__ == '__main__':
     parser.add_argument('--data_dir', type=str, default='../data/categories/')
     # options
     parser.add_argument('--category', type=str, default=None)
-    parser.add_argument('--n_processes', type=int, default=40)
+    parser.add_argument('--n_processes', type=int, default=1)
 
     args = parser.parse_args()
 

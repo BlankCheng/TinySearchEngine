@@ -2,7 +2,7 @@ from urllib.request import urlopen
 from bs4 import BeautifulSoup
 from tqdm import tqdm
 
-MAX_LEVEL = 5
+MAX_LEVEL = 1
 # root = "Areas_of_computer_science"
 root = "Main_topic_classifications"
 
@@ -33,7 +33,7 @@ rets = []
 get_subtree(rets,root,1)
 
 with open(f'Wiki_tree-{root}-{MAX_LEVEL}.txt','w') as f:
-    for level,kw in rets:
+    for level, kw in rets:
         try:
             print(str(level)+'#'+kw,file=f)
         except BaseException:

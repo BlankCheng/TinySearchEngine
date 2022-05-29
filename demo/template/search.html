@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ query }} - Wikipedia Search</title>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js'></script>
+    <script src="https://kit.fontawesome.com/8649287819.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="./static/css/search_page.css">
+    <script  src="./static/javascript/search_page.js"></script>
+</head>
+<body>
+
+<p hidden id="method-text">{{ method }}</p>
+
+<!-- nav bar -->
+
+<div class="search-wrapper">
+    <div class="search-box">
+        <div class="search-input">
+            <input type="text" class="input" value="{{ query }}" onkeydown="submit(this, event)" />
+            <span class="fas fa-search" onclick="search(this)"></span>
+        </div>
+        <div class="method-menu-wrapper">
+            <div class="method-selected" onclick="setting(this, event)">{{ method }}</div>
+            <ul id="method-menu">
+              <li onclick="choose_method(this, event)">TF-IDF</li>
+              <li onclick="choose_method(this, event)">Other</li>
+              <li onclick="choose_method(this, event)">Method 3</li>
+              <li onclick="choose_method(this, event)">Method 4</li>
+              <li onclick="choose_method(this, event)">Method 5</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- results -->
+<div class="result-box">
+    <p style="color: #9fa3b1; font-size: 10px">Find {{ n_result }} results in total in {{ t_search }} seconds.</p>
+    {% if q_correction|length > 0 %}
+    <p style="color: #9fa3b1; font-size: 13px">Do you mean by:
+        <strong>{{ q_correction }}</strong>
+    </p>
+    {% endif %}
+    {% for result in results %}
+    <div class="result-item">
+        <div class="result-url">{{ result["page_url"] }}</div>
+        <div class="result-title"><a href="#">{{ result["page_title"] }}</a></div>
+        <div class="result-summary">{{ result["page_summary"] }}</div>
+        <div class="result-categories">
+            {% for category in result["page_main_categories"] %}
+            <div class="result-category-name">{{ category }}</div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<!-- page -->
+
+</body>
+</html>
