@@ -44,7 +44,13 @@ class Checker(object):
 
     @staticmethod
     def query_spell_check(query):
-        return ' '.join([Checker.word_spell_check(w) for w in query.split()])
+        words = query.split(':')
+        corrected_query = ' '.join([Checker.word_spell_check(w) for w in words[-1].split()])
+        if len(words) > 1:
+            field = words[0]
+            return field + ': ' + corrected_query
+        else:
+            return corrected_query
 
 
 if __name__ == '__main__':

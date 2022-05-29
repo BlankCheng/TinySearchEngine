@@ -208,7 +208,7 @@ class RunQuery():
         else:
             page_freq, page_postings = self.query_results.simple_query(preprocessed_query)
 
-        ranked_results = self.ranker.do_ranking(page_freq, page_postings)
+        ranked_results = self.ranker.tfidf_rank(page_freq, page_postings)
 
         return ranked_results
 
@@ -219,6 +219,8 @@ class RunQuery():
             for i, query in enumerate(f):
                 s = time.time()
                 query = query.strip()
+                query = Checker.query_spell_check(query)
+                print(f'After spell correction:- {query}')
                 query1, query2 = self.identify_query_type(query)
 
                 if query2:
@@ -289,6 +291,8 @@ class RunQuery():
             s = time.time()
 
             query = query.strip()
+            query = Checker.query_spell_check(query)
+            print(f'After spell correction:- {query}')
             query1, query2 = self.identify_query_type(query)
 
             if query2:
