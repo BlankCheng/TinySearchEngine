@@ -1,0 +1,7 @@
+{
+  "host": "localhost",
+  "user": "WSM",
+  "password": "WSM123456",
+  "database": "Web",
+  "port": 9999
+}

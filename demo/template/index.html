@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+    <meta charset="UTF-8">
+    <title>Wikipedia Search</title>
+    <script src='https://cdnjs.cloudflare.com/ajax/libs/jquery/3.1.1/jquery.min.js'></script>
+    <script src="https://kit.fontawesome.com/8649287819.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="./static/css/search_box_main.css">
+    <script  src="./static/javascript/search_box_main.js"></script>
+</head>
+<body>
+
+<p hidden id="method-text">TF-IDF</p>
+
+<div class="search-wrapper">
+    <div class="input-holder">
+        <input type="text" id="search-box" class="search-input"
+               placeholder="Type to search" spellcheck="false" onkeydown="submit(this, event)" />
+        <button class="search-icon" onclick="search(this);"><span></span></button>
+    </div>
+    <span class="close" onclick="cancel(this);"></span>
+    <div class="advanced">
+        <span class="fa-solid fa-gear" style="color: #FE5F55; font-size: 25px;" onclick="setting(this, event)"></span>
+        <div id="method-menu">
+            <a class="method-option" onclick="choose_method(this, event)">TF-IDF</a>
+            <a class="method-option" onclick="choose_method(this, event)">Other</a>
+            <a class="method-option" onclick="choose_method(this, event)">Method 3</a>
+            <a class="method-option" onclick="choose_method(this, event)">Method 4</a>
+            <a class="method-option" onclick="choose_method(this, event)">Method 5</a>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
