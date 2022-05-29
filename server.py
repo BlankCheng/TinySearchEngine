@@ -1,10 +1,15 @@
 import os
 import os.path as osp
 import numpy as np
+from tree.utils import CategoryInfo
 
 from flask import Flask, render_template, redirect, url_for, request, jsonify, make_response
 import json
 
+
+data_folder = "./data"
+index_folder = osp.join(data_folder, "index")
+tree_folder = osp.join(data_folder, "tree")
 
 app = Flask(__name__, static_folder="./demo/static", template_folder="./demo/template")
 
@@ -29,12 +34,14 @@ def search():
 
 
 def get_dummy_results(query):
+    category_info = CategoryInfo(data_folder)
+
     return [{
         "page_id": 123456,
         "page_url": "https://xxx.xxx.xxx/yy/zz",
         "page_title": "This is a title",
         "page_summary": f"This is {' and '.join(query.split())}. " * 50,
-        "page_main_categories": ["Economics", "Food"]
+        "page_main_categories": category_info.get_page_category_hierarchy(page_id=123)[0]
     }] * 10
 
 
