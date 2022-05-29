@@ -46,6 +46,38 @@ class WriteData():
             f.write('\n'.join(temp_id_wikiid))
             f.write('\n')
 
+    def write_wikiid_title_map(self):
+
+        global pageid_title_map, pageid_wikiid_map
+        temp_wikiid_title = []
+
+        temp_wikiid_title_map = sorted([(pageid_wikiid_map[id], pageid_title_map[id])
+                                    for id in pageid_wikiid_map.keys()],
+                                   key=lambda item: str(item[0]))
+
+        for id, title in tqdm(temp_wikiid_title_map):
+            t = str(id) + '-' + title.strip()
+            temp_wikiid_title.append(t)
+
+        with open(osp.join(self.save_folder, "wikiid_title_map.txt"), 'a') as f:  # append mode
+            f.write('\n'.join(temp_wikiid_title))
+            f.write('\n')
+
+    def write_wikiid_id_map(self):
+
+        global pageid_wikiid_map
+        temp_wikiid_pageid = []
+
+        temp_wikiid_pageid_map = sorted(pageid_wikiid_map.items(), key=lambda item: str(item[1]))
+
+        for pageid, wikiid in tqdm(temp_wikiid_pageid_map):
+            t = wikiid.strip() + '-' + str(pageid)
+            temp_wikiid_pageid.append(t)
+
+        with open(osp.join(self.save_folder, "wikiid_pageid_map.txt"), 'a') as f:  # append mode
+            f.write('\n'.join(temp_wikiid_pageid))
+            f.write('\n')
+
 
 class WikiIdParser(xml.sax.ContentHandler):
 
@@ -83,6 +115,8 @@ class WikiIdParser(xml.sax.ContentHandler):
                 # write to file
                 self.write_data.write_id_title_map()
                 self.write_data.write_id_wikiid_map()
+                self.write_data.write_wikiid_title_map()
+                self.write_data.write_wikiid_id_map()
                 pageid_title_map = {}
                 pageid_wikiid_map = {}
 
@@ -101,8 +135,8 @@ class WikiIdParser(xml.sax.ContentHandler):
 
 
 if __name__ == '__main__':
-    default_xml = osp.expanduser("~/data/wiki-dumps/enwiki-latest-pages-articles16.xml-p20460153p20570392")
-    # default_xml = osp.expanduser("~/data/wiki-dumps/enwiki-latest-pages-articles10.xml-p4045403p5399366")
+    # default_xml = osp.expanduser("~/data/wiki-dumps/enwiki-latest-pages-articles16.xml-p20460153p20570392")
+    default_xml = osp.expanduser("~/data/wiki-dumps/enwiki-latest-pages-articles10.xml-p4045403p5399366")
     # default_xml = osp.expanduser("~/lmj/Wiki-Search-Engine/dumps/test.xml")
 
     argparser = argparse.ArgumentParser("Parse wikipedia page id")
@@ -118,6 +152,10 @@ if __name__ == '__main__':
         pass
     with open(osp.join(args.save_folder, "pageid_title_map.txt"), "w") as f:
         pass
+    with open(osp.join(args.save_folder, "wikiid_pageid_map.txt"), "w") as f:
+        pass
+    with open(osp.join(args.save_folder, "wikiid_title_map.txt"), "w") as f:
+        pass
 
     write_data = WriteData(args.save_folder)
 
@@ -129,6 +167,24 @@ if __name__ == '__main__':
 
     write_data.write_id_title_map()
     write_data.write_id_wikiid_map()
+    write_data.write_wikiid_title_map()
+    write_data.write_wikiid_id_map()
+
+    with open(osp.join(args.save_folder, "wikiid_pageid_map.txt"), "r") as f:
+        wikiid_pageid = f.readlines()
+        wikiid_pageid = [line.strip().split("-") for line in wikiid_pageid]
+        wikiid_pageid = sorted(wikiid_pageid, key=lambda item: item[0])
+    with open(osp.join(args.save_folder, "wikiid_pageid_map.txt"), "w") as f:
+        for item in wikiid_pageid:
+            f.write("-".join(item) + "\n")
+
+    with open(osp.join(args.save_folder, "wikiid_title_map.txt"), "r") as f:
+        wikiid_title = f.readlines()
+        wikiid_title = [line.strip().split("-") for line in wikiid_title]
+        wikiid_title = sorted(wikiid_title, key=lambda item: item[0])
+    with open(osp.join(args.save_folder, "wikiid_title_map.txt"), "w") as f:
+        for item in wikiid_title:
+            f.write("-".join(item) + "\n")
 
     print("num pages:", num_pages)
 

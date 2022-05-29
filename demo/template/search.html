@@ -44,7 +44,7 @@
     {% for result in results %}
     <div class="result-item">
         <div class="result-url">{{ result["page_url"] }}</div>
-        <div class="result-title"><a href="#">{{ result["page_title"] }}</a></div>
+        <div class="result-title"><a href="{{ result['page_url'] }}">{{ result["page_title"] }}</a></div>
         <div class="result-summary">{{ result["page_summary"] }}</div>
         <div class="result-categories">
             {% for category in result["page_main_categories"] %}
