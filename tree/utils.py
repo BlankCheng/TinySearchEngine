@@ -2,6 +2,7 @@ import os
 import os.path as osp
 import linecache
 from tqdm import tqdm
+from typing import List, Union
 
 
 class CategoryInfo(object):
@@ -259,7 +260,36 @@ class CategoryInfo(object):
         id_generatlity_map_file.close()
 
 
-if __name__ == '__main__':
+class CategoryFilter(object):
+    def __init__(self, data_folder="../data"):
+        self.category_info = CategoryInfo(data_folder)
+
+    def filter_pages(self, query: str) -> Union[List, None]:
+        """
+        Given a query, return a list of docid's belonging to the category specified by the query.
+          The specified category should appear at the end of the query, splitted by a '|' character.
+        If the category is not specified, this function will return None. (i.e. search from all documents)
+
+        Examples:
+        1.  query: "hello world | economy" -> this function will return a list of
+                                              docid's belonging to category 'economy'
+        2.  query: "hello world" -> (without specified category) this function will return None
+        :param query: the query string (can be the raw query)
+        :return:
+        """
+        query = query.strip()
+
+        if " | " not in query:
+            return None
+
+        category_name = query.split(" | ")[-1]
+        if len(category_name) == 0:
+            return None
+
+        return self.category_info.get_category_pageid(category_name=category_name)
+
+
+def _test_category_info():
     import time
     category_info = CategoryInfo(data_folder="../data")
     t0 = time.time()
@@ -277,3 +307,27 @@ if __name__ == '__main__':
     print(category_info.get_page_category_hierarchy(wiki_id=15002023))
 
     print(f"Finished in {time.time() - t0} seconds.")
+
+
+def _test_category_filter():
+    cat_filter = CategoryFilter(data_folder="../data")  # the folder to the saved files
+    queries = [
+        "hello world | Economy",
+        "hello world | economy",
+        "hello world",
+    ]
+    for query in queries:
+        print(query)
+        filtered_docids = cat_filter.filter_pages(query)
+        if filtered_docids:  # w/ specified category -> return a list of docid's belonging to this category
+            print(len(filtered_docids))
+        else:  # w.o. specified category -> return None
+            print(filtered_docids)
+
+
+if __name__ == '__main__':
+    _test_category_info()
+    _test_category_filter()
+
+
+
