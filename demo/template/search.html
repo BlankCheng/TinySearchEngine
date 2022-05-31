@@ -46,16 +46,35 @@
         <div class="result-url">{{ result["page_url"] }}</div>
         <div class="result-title"><a href="{{ result['page_url'] }}">{{ result["page_title"] }}</a></div>
         <div class="result-summary">{{ result["page_summary"] }}</div>
+        {% for i in range(result["page_main_categories"]|length) %}
         <div class="result-categories">
-            {% for category in result["page_main_categories"] %}
+            {% for category in result["page_main_categories"][i] %}
             <div class="result-category-name">{{ category }}</div>
             {% endfor %}
         </div>
+        {% endfor %}
     </div>
     {% endfor %}
+
+    <!-- page -->
+    <br>
+    <div class="switch-page">
+        {% if disable_previous %}
+        <button class="btn-switch-page" disabled>Previous</button>
+        {% else %}
+        <button class="btn-switch-page" onclick="previous_page()">Previous</button>
+        {% endif %}
+        {% if disable_next %}
+        <button class="btn-switch-page" disabled>Next</button>
+        {% else %}
+        <button class="btn-switch-page" onclick="next_page()">Next</button>
+        {% endif %}
+    </div>
 </div>
 
-<!-- page -->
+
+
+
 
 </body>
 </html>

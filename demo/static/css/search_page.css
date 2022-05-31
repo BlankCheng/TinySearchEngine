@@ -156,6 +156,38 @@ body {
     border-radius: 5px;
 }
 
+.result-box .switch-page {
+    position: relative;
+    display: inline-block;
+}
+
+.result-box .switch-page .btn-switch-page {
+    display: inline-block;
+    outline: 0;
+    text-align: center;
+    cursor: pointer;
+    height: 34px;
+    padding: 0 13px;
+    color: #fff;
+    vertical-align: top;
+    border-radius: 3px;
+    border: 1px solid transparent;
+    transition: all .3s ease;
+    background: #cc4d29;
+    font-weight: 600;
+    text-transform: uppercase;
+    line-height: 16px;
+    font-size: 11px;
+}
+
+.result-box .switch-page .btn-switch-page:hover {
+    background: #e4461b;
+}
+
+.result-box .switch-page .btn-switch-page:disabled {
+    background: #eead9d;
+}
+
 
 a {
     color: brown;

@@ -54,7 +54,7 @@ function choose_method(obj, event){
 }
 
 function redirect(query, method){
-    window.location.href = "/search?q=" + query + "&m=" + method;
+    window.location.href = "/search?q=" + query + "&m=" + method + "&p=1";
 }
 
 function get_method(){

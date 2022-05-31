@@ -1,3 +1,25 @@
+function parse_query_string(query) {
+  var vars = query.split("&");
+  var query_string = {};
+  for (var i = 0; i < vars.length; i++) {
+    var pair = vars[i].split("=");
+    var key = decodeURIComponent(pair.shift());
+    var value = decodeURIComponent(pair.join("="));
+    // If first entry with this name
+    if (typeof query_string[key] === "undefined") {
+      query_string[key] = value;
+      // If second entry with this name
+    } else if (typeof query_string[key] === "string") {
+      var arr = [query_string[key], value];
+      query_string[key] = arr;
+      // If third or later entry with this name
+    } else {
+      query_string[key].push(value);
+    }
+  }
+  return query_string;
+}
+
 function search(obj){
     var container = $(obj).closest('.search-wrapper');
     var input = container.find('.input');
@@ -35,8 +57,8 @@ function choose_method(obj, event){
     $(".method-selected").text(m);
 }
 
-function redirect(query, method){
-    window.location.href = "/search?q=" + query + "&m=" + method;
+function redirect(query, method, page=1){
+    window.location.href = "/search?q=" + query + "&m=" + method + "&p=" + page.toString();
 }
 
 function get_method(){
@@ -45,4 +67,14 @@ function get_method(){
 
 function set_method(m){
     document.getElementById("method-text").innerText = m;
+}
+
+function next_page(){
+    params = parse_query_string(window.location.search.substring(1));
+    redirect(params.q, params.m, eval(params.p) + 1);
+}
+
+function previous_page(){
+    params = parse_query_string(window.location.search.substring(1));
+    redirect(params.q, params.m, eval(params.p) - 1);
 }
