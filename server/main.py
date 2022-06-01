@@ -78,7 +78,7 @@ def search():
 
         method_name = METHOD_MAP[method]
 
-        page_id_list, q_correction, relavent_tokens = get_result(query, method_name)
+        page_id_list, q_correction, relevant_tokens = get_result(query, method_name)
         n_result = len(page_id_list)
 
         disable_previous = page == 1
@@ -86,7 +86,7 @@ def search():
 
         page_id_list = page_id_list[NUM_RESULT_PER_PAGE * (page - 1) : NUM_RESULT_PER_PAGE * page]
 
-        results = specify_results(page_id_list, query=query)
+        results = specify_results(page_id_list, query=query, relevant_tokens=relevant_tokens)
 
         t_search = f"{time.time() - t0:.6}"
 
@@ -105,6 +105,7 @@ def get_result(query: str, method: str) -> Tuple[List, Union[None, str], List]:
 
     result_dict = run_query.query_api(query, method)
     ranked_results = result_dict["ranked_results"]
+    print("Totally", len(ranked_results), "results.")
     corrected_query = result_dict["corrected_query"]
     relevant_tokens = result_dict["relevant_tokens"]
 
@@ -117,7 +118,7 @@ def get_result(query: str, method: str) -> Tuple[List, Union[None, str], List]:
     return ranked_docid, corrected_query, relevant_tokens
 
 
-def specify_results(page_id_list, query):
+def specify_results(page_id_list, query, relevant_tokens=None):
     category_info = CategoryInfo(data_folder)
     results = []
     for page_id in page_id_list:
@@ -129,15 +130,18 @@ def specify_results(page_id_list, query):
         else:
             result["page_title"] = result["page_title"].strip().split("-", 1)[1]
         result["page_url"] = "https://en.wikipedia.org/wiki/" + result["page_title"].replace(" ", "_")
-        result["page_summary"] = generate_summary(page_id, query)
+        result["page_summary"] = generate_summary(page_id, query, relevant_tokens)
         result["page_main_categories"] = category_info.get_page_category_hierarchy(page_id=page_id)  # TODO
         results.append(result)
     return results
 
 
-def generate_summary(page_id, query):
+# TODO: add corrected query ...
+def generate_summary(page_id, query, corrected_query="", relevant_tokens=None):
     query_words = query.split(" | ")[0].strip().split()
     query_words = stemmer.stemWords(query_words)
+    if relevant_tokens is not None:
+        query_words.extend(relevant_tokens)
     line = linecache.getline(osp.join(text_folder, "pageid_info_map.txt"), page_id + 1)
     _, file_id, line_id = line.split("-")
     file_id = int(file_id)
@@ -176,11 +180,14 @@ def generate_summary(page_id, query):
             html.append(raw_text[i])
         if len(html) > MAX_NUM_WORD_PER_SUMMARY:
             break
-    if len(html) == 1:
+    if len(html) <= 1:
         html = raw_text[:MAX_NUM_WORD_PER_SUMMARY]
 
-    if html[-1] != "...":
-        html.append("...")
+    if len(html) == 0:
+        html.append("(No text)")
+    else:
+        if html[-1] != "...":
+            html.append("...")
 
     html = " ".join(html)
 
