@@ -1,6 +1,7 @@
 import math
 import argparse
 import linecache
+import time
 from collections import Counter
 import sys
 
@@ -190,7 +191,7 @@ class RunQuery():
         else:
             return query, None
 
-    def return_query_results(self, query, query_type):
+    def return_query_results(self, query, query_type, method='weigthed_field_tf_idf'):
 
         if query_type == 'field':
             preprocessed_query = [[qry.split(':')[0], self.text_pre_processor.preprocess_text(qry.split(':')[1])] for qry in query]
@@ -208,7 +209,7 @@ class RunQuery():
             page_freq, page_postings = self.query_results.simple_query(preprocessed_query)
 
         ranked_results = self.ranker.rank(
-            method='weighted_field_tf_idf',
+            method=method,
             page_freq=page_freq,
             page_postings=page_postings
         )
@@ -334,6 +335,63 @@ class RunQuery():
             e = time.time()
             print('Finished in', e-s, 'seconds')
             print()
+
+    def query_api(self, query, method):
+
+        start = time.time()
+
+        query = query.strip()
+        ori_query = query
+        query = Checker.query_spell_check(query)
+        if query == ori_query:
+            corrected_query = None
+        else:
+            corrected_query = query
+        # print(f'After spell correction:- {query}')
+
+        query1, query2 = self.identify_query_type(query)
+
+        if query2:
+            ranked_results1 = self.return_query_results(query1, 'simple', method)
+
+            ranked_results2 = self.return_query_results(query2, 'field', method)
+
+            ranked_results = Counter(ranked_results1) + Counter(ranked_results2)
+            results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
+            results = results[:num_results]
+
+            for id, _ in results:
+                title= self.file_traverser.title_search(id)
+                print(id+',', title)
+
+        elif type(query1)==type([]):
+
+            ranked_results = self.return_query_results(query1, 'field', method)
+
+            results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
+            results = results[:num_results]
+
+            for id, _ in results:
+                title= self.file_traverser.title_search(id)
+                print(id+',', title)
+
+        else:
+            ranked_results = self.return_query_results(query1, 'simple', method)
+
+            results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
+            results = results[:num_results]
+
+            for id, _ in results:
+                title= self.file_traverser.title_search(id)
+                print(id+',', title)
+
+        print('Finished in', time.time() - start, 'seconds')
+        print()
+
+        return {
+            'ranked_results': ranked_results,
+            'corrected_query': corrected_query,
+        }
 
 
 '''
