@@ -29,6 +29,6 @@ The fields **--filename** and **--num_results** are optional. By default **--num
 **Web demo**
 
 ~~~shell
-python server.py
+python main.py
 ~~~
 

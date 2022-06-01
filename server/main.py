@@ -1,24 +1,57 @@
 import linecache
 import os
 import os.path as osp
+import sys
+sys.path.append("..")
 import time
+import re
 from Stemmer import Stemmer
+from nltk.corpus import stopwords
 import numpy as np
-from typing import Tuple, Union
+from typing import Tuple, Union, List
+
 from tree.utils import CategoryInfo
+from search.english_search import RunQuery, FileTraverser, QueryResults
+from search.english_indexer import TextPreProcessor
+from utils.ranker import Ranker
 
 from flask import Flask, render_template, redirect, url_for, request, jsonify, make_response
 from markupsafe import Markup
 import json
 
-
-data_folder = "./data"
+# ====================== #
+#     specify paths      #
+# ====================== #
+data_folder = "../data"
 index_folder = osp.join(data_folder, "index")
 tree_folder = osp.join(data_folder, "tree")
 text_folder = osp.join(data_folder, "text")
+
+# ====================== #
+#    initialize tools    #
+# ====================== #
 stemmer = Stemmer('english')
+
+with open('../data/index/num_pages.txt', 'r') as f:
+    num_pages = float(f.readline().strip())
+
+stop_words = (set(stopwords.words("english")))
+html_tags = re.compile('&amp;|&apos;|&gt;|&lt;|&nbsp;|&quot;')
+text_pre_processor = TextPreProcessor(html_tags, stemmer, stop_words)
+file_traverser = FileTraverser()
+ranker = Ranker(num_pages)
+query_results = QueryResults(file_traverser)
+run_query = RunQuery(text_pre_processor, file_traverser, ranker, query_results)
+METHOD_MAP = {
+    "TF-IDF": "weighted_field_tf_idf",
+    "Field": "weighted_field_tf_idf",
+    "COS": "cosine_similarity_tf_idf",
+    "BM25": "bm25",
+    "Cate": "category_generality"
+}
 NUM_RESULT_PER_PAGE = 20
 MAX_NUM_WORD_PER_SUMMARY = 100
+
 
 
 app = Flask(__name__, static_folder="./demo/static", template_folder="./demo/template")
@@ -43,7 +76,9 @@ def search():
 
         t0 = time.time()
 
-        q_correction, page_id_list = get_result(query, method)
+        method_name = METHOD_MAP[method]
+
+        page_id_list, q_correction, relavent_tokens = get_result(query, method_name)
         n_result = len(page_id_list)
 
         disable_previous = page == 1
@@ -66,9 +101,20 @@ def search():
         return redirect(url_for("render_index"))
 
 
-def get_result(query: str, method: str) -> Tuple[Union[None, str], Tuple]:
-    time.sleep(0.5)
-    return "shit", (5, 8, 9, 10, 11, 12, 13) * 5
+def get_result(query: str, method: str) -> Tuple[List, Union[None, str], List]:
+
+    result_dict = run_query.query_api(query, method)
+    ranked_results = result_dict["ranked_results"]
+    corrected_query = result_dict["corrected_query"]
+    relevant_tokens = result_dict["relevant_tokens"]
+
+    ranked_docid = sorted(ranked_results.keys(), key=lambda docid: ranked_results[docid], reverse=True)
+    ranked_docid = [int(docid) for docid in ranked_docid]
+    if corrected_query is None:
+        corrected_query = ""
+    relevant_tokens = list(relevant_tokens)
+
+    return ranked_docid, corrected_query, relevant_tokens
 
 
 def specify_results(page_id_list, query):

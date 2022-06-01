@@ -628,22 +628,8 @@ class RunQuery():
 
             ranked_results, relevant_tokens = self.return_query_results(query1, 'field', method)
 
-            results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
-            results = results[:num_results]
-
-            for id, _ in results:
-                title= self.file_traverser.title_search(id)
-                print(id+',', title)
-
         else:
             ranked_results, relevant_tokens = self.return_query_results(query1, 'simple', method)
-
-            results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
-            results = results[:num_results]
-
-            for id, _ in results:
-                title= self.file_traverser.title_search(id)
-                print(id+',', title)
 
         print('Finished in', time.time() - start, 'seconds')
         print()
