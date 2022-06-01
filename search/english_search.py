@@ -124,9 +124,9 @@ class FileTraverser():
     def get_wild_card_info(self, perm_token, num_results=5):
         valid_list = [chr(i) for i in range(97, 123)] + [str(i) for i in range(0, 10)] + ['$']
         if perm_token[0] in valid_list:
-            with open(f'wild-card/output/perm_token_info_{perm_token[0]}_count.txt', 'r') as f:
+            with open(f'../data/wild-card/output/perm_token_info_{perm_token[0]}_count.txt', 'r') as f:
                 num_tokens = int(f.readline().strip())
-            tokens_info_pointer = f'wild-card/output/perm_token_info_{perm_token[0]}.txt'
+            tokens_info_pointer = f'../data/wild-card/output/perm_token_info_{perm_token[0]}.txt'
             token_info = self.binary_search_wild_card_info(num_tokens, tokens_info_pointer, perm_token,
                                                            num_results=num_results)
 
@@ -407,11 +407,9 @@ class RunQuery():
         else:
             return query, None
 
-    def return_query_results(self, query, query_type, method='weigthed_field_tf_idf'):
+    def return_query_results(self, query, query_type, method='weighted_field_tf_idf'):
         if query_type == 'field':
             # input: [c:apple, t:pear orange]
-
-            # preprocessed_query = [[qry.split(':')[0], self.text_pre_processor.preprocess_text(qry.split(':')[1])] for qry in query]
             wild_card_token = ''
             preprocessed_query = []
             for qry in query:
@@ -441,45 +439,31 @@ class RunQuery():
             if wild_card_token:
                 preprocessed_query.append(wild_card_token)
         # output: [like, eat]
-        print(preprocessed_query)
 
         if query_type == 'field':
-
             preprocessed_query_final = []
             for field, words in preprocessed_query:
                 for word in words:
                     preprocessed_query_final.append([field, word])
-
-            # page_freq, page_postings = self.query_results.field_query(preprocessed_query_final)
             final_results = self.query_results.field_query_wild_card(preprocessed_query_final)
         else:
-
-            # page_freq, page_postings = self.query_results.simple_query(preprocessed_query)
             final_results = self.query_results.simple_query_wild_card(preprocessed_query)
 
-        print(final_results)
+        ranked_results, relevant_tokens = {}, set()
+        for page_freq, page_postings in final_results:
+            for token in page_freq.keys():
+                relevant_tokens.add(token)
 
-        # if query_type == 'field':
-        #     preprocessed_query = [[qry.split(':')[0], self.text_pre_processor.preprocess_text(qry.split(':')[1])] for qry in query]
-        # else:
-        #     preprocessed_query = self.text_pre_processor.preprocess_text(query)
-        #
-        # if query_type == 'field':
-        #     preprocessed_query_final = []
-        #     for field, words in preprocessed_query:
-        #         for word in words:
-        #             preprocessed_query_final.append([field, word])
-        #
-        #     page_freq, page_postings = self.query_results.field_query(preprocessed_query_final)
-        # else:
-        #     page_freq, page_postings = self.query_results.simple_query(preprocessed_query)
-        #
-        # ranked_results = self.ranker.rank(
-        #     method=method,
-        #     page_freq=page_freq,
-        #     page_postings=page_postings
-        # )
-        return ranked_results
+            tmp_ranked_results = self.ranker.rank(
+                method=method,
+                page_freq=page_freq,
+                page_postings=page_postings
+            )
+            for doc_id, score in tmp_ranked_results.items():
+                if doc_id not in ranked_results or ranked_results[doc_id] < score:
+                    ranked_results[doc_id] = score
+
+        return ranked_results, relevant_tokens
 
     def take_input_from_file(self, file_name, num_results):
         results_file = file_name.split('.txt')[0]
@@ -493,9 +477,11 @@ class RunQuery():
                 query1, query2 = self.identify_query_type(query)
 
                 if query2:
-                    ranked_results1 = self.return_query_results(query1, 'simple')
+                    ranked_results1, relevant_tokens1 = self.return_query_results(query1, 'simple')
 
-                    ranked_results2 = self.return_query_results(query2, 'field')
+                    ranked_results2, relevant_tokens2 = self.return_query_results(query2, 'field')
+
+                    relevant_tokens = relevant_tokens1 | relevant_tokens2
 
                     ranked_results = Counter(ranked_results1) + Counter(ranked_results2)
                     results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
@@ -512,7 +498,7 @@ class RunQuery():
 
                 elif type(query1) == type([]):
 
-                    ranked_results = self.return_query_results(query1, 'field')
+                    ranked_results, relevant_tokens = self.return_query_results(query1, 'field')
 
                     results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
                     results = results[:num_results]
@@ -527,7 +513,7 @@ class RunQuery():
                         fp.write('\n')
 
                 else:
-                    ranked_results = self.return_query_results(query1, 'simple')
+                    ranked_results, relevant_tokens = self.return_query_results(query1, 'simple')
 
                     results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
                     results = results[:num_results]
@@ -542,6 +528,8 @@ class RunQuery():
                         fp.write('\n')
 
                 e = time.time()
+                print('Relevant tokens')
+                print(relevant_tokens)
                 fp.write('Finished in ' + str(e-s) + ' seconds')
                 fp.write('\n\n')
 
@@ -565,9 +553,11 @@ class RunQuery():
             query1, query2 = self.identify_query_type(query)
 
             if query2:
-                ranked_results1 = self.return_query_results(query1, 'simple')
+                ranked_results1, relevant_tokens1 = self.return_query_results(query1, 'simple')
 
-                ranked_results2 = self.return_query_results(query2, 'field')
+                ranked_results2, relevant_tokens2 = self.return_query_results(query2, 'field')
+
+                relevant_tokens = relevant_tokens1 | relevant_tokens2
 
                 ranked_results = Counter(ranked_results1) + Counter(ranked_results2)
                 results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
@@ -579,7 +569,7 @@ class RunQuery():
 
             elif type(query1)==type([]):
 
-                ranked_results = self.return_query_results(query1, 'field')
+                ranked_results, relevant_tokens = self.return_query_results(query1, 'field')
 
                 results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
                 results = results[:num_results]
@@ -589,7 +579,7 @@ class RunQuery():
                     print(id+',', title)
 
             else:
-                ranked_results = self.return_query_results(query1, 'simple')
+                ranked_results, relevant_tokens = self.return_query_results(query1, 'simple')
 
                 results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
                 results = results[:num_results]
@@ -599,6 +589,8 @@ class RunQuery():
                     print(id+',', title)
 
             e = time.time()
+            print('Relevant tokens')
+            print(relevant_tokens)
             print('Finished in', e-s, 'seconds')
             print()
 
@@ -618,9 +610,11 @@ class RunQuery():
         query1, query2 = self.identify_query_type(query)
 
         if query2:
-            ranked_results1 = self.return_query_results(query1, 'simple', method)
+            ranked_results1, relevant_tokens1 = self.return_query_results(query1, 'simple', method)
 
-            ranked_results2 = self.return_query_results(query2, 'field', method)
+            ranked_results2, relevant_tokens2 = self.return_query_results(query2, 'field', method)
+
+            relevant_tokens = relevant_tokens1 | relevant_tokens2
 
             ranked_results = Counter(ranked_results1) + Counter(ranked_results2)
             results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
@@ -632,7 +626,7 @@ class RunQuery():
 
         elif type(query1)==type([]):
 
-            ranked_results = self.return_query_results(query1, 'field', method)
+            ranked_results, relevant_tokens = self.return_query_results(query1, 'field', method)
 
             results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
             results = results[:num_results]
@@ -642,7 +636,7 @@ class RunQuery():
                 print(id+',', title)
 
         else:
-            ranked_results = self.return_query_results(query1, 'simple', method)
+            ranked_results, relevant_tokens = self.return_query_results(query1, 'simple', method)
 
             results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
             results = results[:num_results]
@@ -657,6 +651,7 @@ class RunQuery():
         return {
             'ranked_results': ranked_results,
             'corrected_query': corrected_query,
+            'relevant_tokens': relevant_tokens
         }
 
 

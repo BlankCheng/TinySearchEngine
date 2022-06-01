@@ -57,7 +57,7 @@ def worker(token_file):
 total_perm = 0
 with tqdm(total=n_tokens, ncols=80, desc='Write to temp files') as pbar:
     for token_file, n_part, n_perm in pr.map(
-            worker, token_files, workers=5, maxsize=10):
+            worker, token_files, workers=1, maxsize=10):
         total_perm += n_perm
         pbar.update(n_part)
 
