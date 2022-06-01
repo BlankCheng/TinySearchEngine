@@ -40,6 +40,41 @@ class FileTraverser():
 
         return None
 
+    def binary_search_wild_card_info(self, high, filename, perm_token, num_results=5):
+
+        low = 0
+        len_prefix = len(perm_token)
+        result_row = -1
+        while low <= high:
+
+            mid = (low + high) // 2
+            line = linecache.getline(filename, mid)
+            token = line.split('-')[0]
+            if perm_token == token:
+                result_row = mid
+                break
+            elif token > perm_token:
+                if token[:len_prefix] == perm_token:
+                    result_row = mid
+                high = mid - 1
+
+            else:
+                low = mid + 1
+        if result_row == -1:
+            return None
+        lines = []
+        line = linecache.getline(filename, result_row)
+        tokens = line.split('-')[:-1]
+        while tokens[0][:len(perm_token)] == perm_token:
+            lines.append(tokens[1:])
+            result_row += 1
+            line = linecache.getline(filename, result_row)
+            tokens = line.split('-')[:-1]
+        lines.sort(key=lambda x: int(x[2]), reverse=True)
+        if not num_results:
+            return lines
+        return lines[:num_results]
+
     def title_search(self, page_id):
 
         title = linecache.getline('../data/index/id_title_map.txt', int(page_id)+1).strip()
@@ -86,6 +121,20 @@ class FileTraverser():
 
         return token_info
 
+    def get_wild_card_info(self, perm_token, num_results=5):
+        valid_list = [chr(i) for i in range(97, 123)] + [str(i) for i in range(0, 10)] + ['$']
+        if perm_token[0] in valid_list:
+            with open(f'wild-card/output/perm_token_info_{perm_token[0]}_count.txt', 'r') as f:
+                num_tokens = int(f.readline().strip())
+            tokens_info_pointer = f'wild-card/output/perm_token_info_{perm_token[0]}.txt'
+            token_info = self.binary_search_wild_card_info(num_tokens, tokens_info_pointer, perm_token,
+                                                           num_results=num_results)
+
+        else:
+            token_info = None
+
+        return token_info
+
 
 '''
 This class takes query as input and returns the corresponding postings along with theis fields
@@ -95,6 +144,173 @@ class QueryResults():
     def __init__(self, file_traverser):
 
         self.file_traverser = file_traverser
+
+    def deal_with_wird_card(self, token):
+        """WILD CARD
+        Only support:
+            - one '*' e.g. X*, *X, X*Y
+            - two '*'s: e.g. *X* and X*Y*Z
+        """
+        pattern1 = re.compile('^\*[0-9a-z]+\*$')  # *X*
+        pattern2 = re.compile('^[0-9a-z]+\*[0-9a-z]+\*[0-9a-z]+$')  # X*Y*Z
+        n = 10
+        num_results = n
+        count = token.count('*')
+        if not count or count >= 3:
+            return []
+        if count == 1:
+            # X* -> X*$
+            new_token = token + '$'
+        else:
+            if re.match(pattern1, token):
+                # *X* -> X*
+                new_token = re.findall(r'\*[0-9a-z]+\*', token)[0][1:]
+            elif re.match(pattern2, token):
+                # X*Y*Z -> X*Z$
+                Y = re.findall(r'\*[0-9a-z]+\*', token)[0][1:-1]
+                new_token = re.findall(r'^[0-9a-z]+\*', token)[0] + re.findall(r'\*[0-9a-z]+$', token)[0][1:]
+                new_token = new_token + '$'
+                num_results = None
+            else:
+                return []
+
+        pos = new_token.find('*')
+        perm_token = new_token[pos + 1:] + new_token[: pos]
+        postings = self.file_traverser.get_wild_card_info(perm_token, num_results=num_results)
+        if re.match(pattern2, token):
+            postings = list(filter(lambda x: Y in x[0], postings))
+            # postings.sort(key=lambda x: x[2], reverse=True)
+            postings = postings[:n]
+        # print([token[0] for token in tokens])
+        return postings
+
+    def simple_query_wild_card(self, preprocessed_query):
+
+        final_results = []
+        page_freq, page_postings = {}, defaultdict(dict)
+
+        all_tokens, all_cand_tokens = [], []
+        for token in preprocessed_query:
+            if '*' in token:
+                token_infos = self.deal_with_wird_card(token)
+                # token, file_num, freq, ...
+                all_cand_tokens = token_infos
+            else:
+                token_info = self.file_traverser.get_token_info(token)
+                if token_info:
+                    all_tokens.append([token, token_info])
+
+        for token, token_info in all_tokens:
+            file_num, freq, title_line, body_line, category_line, infobox_line, link_line, reference_line = token_info
+            line_map = {
+                'title': title_line,
+                'body': body_line,
+                'category': category_line,
+                'infobox': infobox_line,
+                'link': link_line,
+                'reference': reference_line
+            }
+            page_freq[token] = freq
+            for field_name, line_num in line_map.items():
+
+                if line_num != '':
+                    posting = self.file_traverser.search_field_file(field_name, file_num, line_num)
+
+                    # page_freq[token] = len(posting.split(';'))
+                    page_postings[token][field_name] = posting
+
+        if not all_cand_tokens:  # not wild card
+            final_results.append([page_freq, page_postings])
+            return final_results
+
+        for cand_tokens in all_cand_tokens:
+            cand_page_freq, cand_page_postings = page_freq.copy(), page_postings.copy()
+            token, *token_info = cand_tokens
+            file_num, freq, title_line, body_line, category_line, infobox_line, link_line, reference_line = token_info
+            line_map = {
+                'title': title_line,
+                'body': body_line,
+                'category': category_line,
+                'infobox': infobox_line,
+                'link': link_line,
+                'reference': reference_line
+            }
+            cand_page_freq[token] = freq
+            for field_name, line_num in line_map.items():
+
+                if line_num != '':
+                    posting = self.file_traverser.search_field_file(field_name, file_num, line_num)
+
+                    # page_freq[token] = len(posting.split(';'))
+                    cand_page_postings[token][field_name] = posting
+            final_results.append([cand_page_freq, cand_page_postings])
+        return final_results
+
+    def field_query_wild_card(self, preprocessed_query):
+        """
+        preprocessed_query: [[<field>, <token>], ...]
+        """
+        final_results = []
+        page_freq, page_postings = {}, defaultdict(dict)
+
+        all_tokens, all_cand_tokens = [], []
+        for field, token in preprocessed_query:
+            if '*' in token:
+                token_infos = self.deal_with_wird_card(token)
+                # token, file_num, freq, ...
+                all_cand_tokens.extend([[field, token_info] for token_info in token_infos])
+            # [c, [posting1, posting2]]
+            else:
+                token_info = self.file_traverser.get_token_info(token)
+                if token_info:
+                    all_tokens.append([field, token, token_info])
+        field_map = {
+            't': 'title',
+            'b': 'body',
+            'c': 'category',
+            'i': 'infobox',
+            'l': 'link',
+            'r': 'reference'
+        }
+        for field, token, token_info in all_tokens:
+            file_num, freq, title_line, body_line, category_line, infobox_line, link_line, reference_line = token_info
+            line_map = {
+                'title': title_line,
+                'body': body_line,
+                'category': category_line,
+                'infobox': infobox_line,
+                'link': link_line,
+                'reference': reference_line
+            }
+
+            field_name = field_map[field]
+            line_num = line_map[field_name]
+
+            posting = self.file_traverser.search_field_file(field_name, file_num, line_num)
+            # page_freq[token] = len(posting)
+            page_freq[token] = freq
+            page_postings[token][field_name] = posting
+        for field, cand_tokens in all_cand_tokens:
+            cand_page_freq, cand_page_postings = page_freq.copy(), page_postings.copy()
+            token, *token_info = cand_tokens
+
+            file_num, freq, title_line, body_line, category_line, infobox_line, link_line, reference_line = token_info
+            line_map = {
+                'title': title_line,
+                'body': body_line,
+                'category': category_line,
+                'infobox': infobox_line,
+                'link': link_line,
+                'reference': reference_line
+            }
+            field_name = field_map[field]
+            line_num = line_map[field_name]
+
+            posting = self.file_traverser.search_field_file(field_name, file_num, line_num)
+            cand_page_freq[token] = freq
+            cand_page_postings[token][field_name] = posting
+            final_results.append([cand_page_freq, cand_page_postings])
+        return final_results
 
     def simple_query(self, preprocessed_query):
 
@@ -192,27 +408,77 @@ class RunQuery():
             return query, None
 
     def return_query_results(self, query, query_type, method='weigthed_field_tf_idf'):
-
         if query_type == 'field':
-            preprocessed_query = [[qry.split(':')[0], self.text_pre_processor.preprocess_text(qry.split(':')[1])] for qry in query]
+            # input: [c:apple, t:pear orange]
+
+            # preprocessed_query = [[qry.split(':')[0], self.text_pre_processor.preprocess_text(qry.split(':')[1])] for qry in query]
+            wild_card_token = ''
+            preprocessed_query = []
+            for qry in query:
+                field, tokens = qry.split(':')
+                new_tokens = []
+                for token in tokens.split(' '):
+                    if '*' in token:
+                        wild_card_token = token
+                    else:
+                        new_tokens.append(token)
+                preprocessed_query.append([
+                    field, self.text_pre_processor.preprocess_text(' '.join(new_tokens))])
+                if wild_card_token:
+                    preprocessed_query[-1][1].append(wild_card_token)
+        # output: [[c, [apple]], [t, [pear,orange]]]
         else:
-            preprocessed_query = self.text_pre_processor.preprocess_text(query)
+            # input: I like to eat
+            # preprocessed_query = self.text_pre_processor.preprocess_text(query)
+            wild_card_token = ''
+            new_query = []
+            for token in query.split(' '):
+                if '*' in token:
+                    wild_card_token = token
+                else:
+                    new_query.append(token)
+            preprocessed_query = self.text_pre_processor.preprocess_text(' '.join(new_query))
+            if wild_card_token:
+                preprocessed_query.append(wild_card_token)
+        # output: [like, eat]
+        print(preprocessed_query)
 
         if query_type == 'field':
+
             preprocessed_query_final = []
             for field, words in preprocessed_query:
                 for word in words:
                     preprocessed_query_final.append([field, word])
 
-            page_freq, page_postings = self.query_results.field_query(preprocessed_query_final)
+            # page_freq, page_postings = self.query_results.field_query(preprocessed_query_final)
+            final_results = self.query_results.field_query_wild_card(preprocessed_query_final)
         else:
-            page_freq, page_postings = self.query_results.simple_query(preprocessed_query)
 
-        ranked_results = self.ranker.rank(
-            method=method,
-            page_freq=page_freq,
-            page_postings=page_postings
-        )
+            # page_freq, page_postings = self.query_results.simple_query(preprocessed_query)
+            final_results = self.query_results.simple_query_wild_card(preprocessed_query)
+
+        print(final_results)
+
+        # if query_type == 'field':
+        #     preprocessed_query = [[qry.split(':')[0], self.text_pre_processor.preprocess_text(qry.split(':')[1])] for qry in query]
+        # else:
+        #     preprocessed_query = self.text_pre_processor.preprocess_text(query)
+        #
+        # if query_type == 'field':
+        #     preprocessed_query_final = []
+        #     for field, words in preprocessed_query:
+        #         for word in words:
+        #             preprocessed_query_final.append([field, word])
+        #
+        #     page_freq, page_postings = self.query_results.field_query(preprocessed_query_final)
+        # else:
+        #     page_freq, page_postings = self.query_results.simple_query(preprocessed_query)
+        #
+        # ranked_results = self.ranker.rank(
+        #     method=method,
+        #     page_freq=page_freq,
+        #     page_postings=page_postings
+        # )
         return ranked_results
 
     def take_input_from_file(self, file_name, num_results):

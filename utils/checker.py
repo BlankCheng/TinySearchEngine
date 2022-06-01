@@ -35,6 +35,9 @@ class Checker(object):
         """
         Check the word spelling and return the corrected word.
         """
+        if '*' in word:
+            return word
+
         if metric == 'jaccard_dist':
             return Checker._jaccard_distance_closest(word)
         elif metric == 'edit_dist':
