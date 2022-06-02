@@ -86,7 +86,7 @@ def search():
 
         page_id_list = page_id_list[NUM_RESULT_PER_PAGE * (page - 1) : NUM_RESULT_PER_PAGE * page]
 
-        results = specify_results(page_id_list, query=query, relevant_tokens=relevant_tokens)
+        results = specify_results(page_id_list, query=query, corrected_query=q_correction, relevant_tokens=relevant_tokens)
 
         t_search = f"{time.time() - t0:.6}"
 
@@ -118,7 +118,7 @@ def get_result(query: str, method: str) -> Tuple[List, Union[None, str], List]:
     return ranked_docid, corrected_query, relevant_tokens
 
 
-def specify_results(page_id_list, query, relevant_tokens=None):
+def specify_results(page_id_list, query, corrected_query="", relevant_tokens=None):
     category_info = CategoryInfo(data_folder)
     results = []
     for page_id in page_id_list:
@@ -130,8 +130,9 @@ def specify_results(page_id_list, query, relevant_tokens=None):
         else:
             result["page_title"] = result["page_title"].strip().split("-", 1)[1]
         result["page_url"] = "https://en.wikipedia.org/wiki/" + result["page_title"].replace(" ", "_")
-        result["page_summary"] = generate_summary(page_id, query, relevant_tokens)
-        result["page_main_categories"] = category_info.get_page_category_hierarchy(page_id=page_id)  # TODO
+        result["page_summary"] = generate_summary(page_id, query, corrected_query, relevant_tokens)
+        result["page_main_categories"] = category_info.get_page_category_hierarchy(page_id=page_id)
+        result["page_main_categories"] = sorted(result["page_main_categories"], key=lambda item: len(item))
         results.append(result)
     return results
 
@@ -139,6 +140,8 @@ def specify_results(page_id_list, query, relevant_tokens=None):
 # TODO: add corrected query ...
 def generate_summary(page_id, query, corrected_query="", relevant_tokens=None):
     query_words = query.split(" | ")[0].strip().split()
+    if len(corrected_query) > 0:
+        query_words += corrected_query.split()
     query_words = stemmer.stemWords(query_words)
     if relevant_tokens is not None:
         query_words.extend(relevant_tokens)

@@ -123,6 +123,25 @@ def mysql_fetch_page_title(cursor, page_id, verbose=0):
     return title
 
 
+def mysql_fetch_page_type(cursor, page_id, verbose=0):
+    sql = "select page_id, page_namespace from page where page_id={};"
+    sql = sql.format(page_id)
+
+    ns = None
+    try:
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        assert len(results) == 1
+        namespace = results[0][1]
+        if verbose == 1:
+            print(f"[fetch namespace] Namespace of Page {page_id}: {namespace}.")
+    except:
+        if verbose == 1:
+            print("Error: unable to fetch data")
+
+    return namespace
+
+
 if __name__ == '__main__':
     db = mysql_connect()
 

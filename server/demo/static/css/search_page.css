@@ -53,13 +53,15 @@ body {
     width: 130px;
     border-radius: 5px;
     padding: 15px;
-    opacity: 0;
+    /*opacity: 0;*/
+    display: none;
     box-shadow: 8px 8px 6px -10px #b3c6ff;
-    transition: opacity 0.3s linear;
+    /*transition: opacity 0.3s linear;*/
 }
 
 .search-wrapper .search-box .method-menu-wrapper ul.active{
-    opacity: 1;
+    /*opacity: 1;*/
+    display: block;
 }
 
 .search-wrapper .search-box .method-menu-wrapper ul li{
@@ -142,7 +144,15 @@ body {
     text-align: justify;
 }
 
-.result-box .result-item .result-categories .result-category-name {
+.result-categories, .detail-category-list {
+
+}
+
+.detail-category-list {
+    display: none;
+}
+
+.result-category-name, .detail-category-item {
     position: relative;
     display: inline-block;
     font-size: 10px;
@@ -154,6 +164,10 @@ body {
     margin-right: 4px;
     background-color: antiquewhite;
     border-radius: 5px;
+}
+
+.detail-category-item {
+    display: none;
 }
 
 .result-box .switch-page {
@@ -189,13 +203,24 @@ body {
 }
 
 
-a {
+a.title-link {
     color: brown;
     text-decoration:none;
 }
-a:hover {
+a.title-link:hover {
     text-decoration:underline;
 }
-a:visited {
+a.title-link:visited {
   color: brown;
+}
+
+a.btn-more-less {
+    color: darkgray;
+    font-size: 10px;
+    font-family: 'Consolas', 'Deja Vu Sans Mono', 'Bitstream Vera Sans Mono', monospace;
+    text-decoration: none;
+}
+a.btn-more-less:hover {
+    color: gray;
+    cursor: pointer;
 }

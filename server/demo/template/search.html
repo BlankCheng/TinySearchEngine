@@ -44,15 +44,40 @@
     {% for result in results %}
     <div class="result-item">
         <div class="result-url">{{ result["page_url"] }}</div>
-        <div class="result-title"><a href="{{ result['page_url'] }}">{{ result["page_title"] }}</a></div>
+        <div class="result-title"><a class="title-link" href="{{ result['page_url'] }}">{{ result["page_title"] }}</a></div>
         <div class="result-summary">{{ result["page_summary"] }}</div>
         {% for i in range(result["page_main_categories"]|length) %}
+
+        {% if i < 3 %}
         <div class="result-categories">
-            {% for category in result["page_main_categories"][i] %}
-            <div class="result-category-name">{{ category }}</div>
+        {% else %}
+        <div class="result-categories detail-category-list">
+        {% endif %}
+            {% for j in range(result["page_main_categories"][i]|length) %}
+
+            {% if j == 0 %}
+            <div class="result-category-name"><strong>{{ result["page_main_categories"][i][j] }}</strong></div>
+            {% elif j > 2 and result["page_main_categories"][i]|length - j > 2 %}
+            <div class="result-category-name detail-category-item">{{ result["page_main_categories"][i][j] }}</div>
+            {% else %}
+            <div class="result-category-name">{{ result["page_main_categories"][i][j] }}</div>
+            {% endif %}
+
+            {% if result["page_main_categories"][i]|length > 5 and j == 2 %}
+            <span class="dots">...</span>
+            {% endif %}
+
             {% endfor %}
+
+            {% if result["page_main_categories"][i]|length > 5 %}
+            <a class="btn-more-less" onclick="toggle_detail_item(this)"><i class="fa-solid fa-circle-plus"></i></a>
+            {% endif %}
         </div>
         {% endfor %}
+
+        {% if result["page_main_categories"]|length > 3 %}
+        <a class="btn-more-less" onclick="toggle_detail_list(this)">[show more categories]</a>
+        {% endif %}
     </div>
     {% endfor %}
 
@@ -71,10 +96,6 @@
         {% endif %}
     </div>
 </div>
-
-
-
-
 
 </body>
 </html>
