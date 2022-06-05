@@ -625,12 +625,6 @@ class RunQuery():
             relevant_tokens = relevant_tokens1 | relevant_tokens2
 
             ranked_results = Counter(ranked_results1) + Counter(ranked_results2)
-            results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
-            results = results[:num_results]
-
-            for id, _ in results:
-                title= self.file_traverser.title_search(id)
-                print(id+',', title)
 
         elif type(query1)==type([]):
             ranked_results, relevant_tokens = self.return_query_results(query1, 'field', method)
