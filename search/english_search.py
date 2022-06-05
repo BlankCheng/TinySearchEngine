@@ -8,6 +8,7 @@ import sys
 from search.english_indexer import *
 from utils.checker import Checker
 from utils.ranker import Ranker
+from tree.utils import CategoryFilter
 
 print(sys.path)
 
@@ -605,6 +606,13 @@ class RunQuery():
         start = time.time()
 
         query = query.strip()
+
+        # category specific
+        retain_docid = CategoryFilter().filter_pages(query)
+
+        if retain_docid is not None:
+            query = query.split(" | ")[0].strip()
+
         ori_query = query
         query = Checker.query_spell_check(query)
         if query == ori_query:
@@ -623,33 +631,20 @@ class RunQuery():
             relevant_tokens = relevant_tokens1 | relevant_tokens2
 
             ranked_results = Counter(ranked_results1) + Counter(ranked_results2)
-            results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
-            results = results[:num_results]
-
-            for id, _ in results:
-                title= self.file_traverser.title_search(id)
-                print(id+',', title)
 
         elif type(query1)==type([]):
-
             ranked_results, relevant_tokens = self.return_query_results(query1, 'field', method)
-
-            results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
-            results = results[:num_results]
-
-            for id, _ in results:
-                title= self.file_traverser.title_search(id)
-                print(id+',', title)
-
         else:
             ranked_results, relevant_tokens = self.return_query_results(query1, 'simple', method)
 
-            results = sorted(ranked_results.items(), key = lambda item : item[1], reverse=True)
-            results = results[:num_results]
-
-            for id, _ in results:
-                title= self.file_traverser.title_search(id)
-                print(id+',', title)
+        # filter
+        if retain_docid is not None:
+            retain_docid = {str(docid): docid for docid in retain_docid}  # to speed up
+            tmp_ranked_results = {}
+            for docid, score in ranked_results.items():
+                if docid in retain_docid:
+                    tmp_ranked_results[docid] = score
+            ranked_results = tmp_ranked_results
 
         print('Finished in', time.time() - start, 'seconds')
         print()
