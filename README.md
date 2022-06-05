@@ -57,3 +57,8 @@ The fields **--filename** and **--num_results** are optional. By default **--num
 python ./server/main.py
 ~~~
 
+*Below shows some screenshots of the web demo. You can refer to [demo.md](./screenshot/demo.md) for more.*
+
+<img src="./screenshot/index-page.png" alt="index-page" style="zoom:80%;" />
+
+<img src="./screenshot/search-main.png" alt="search-main" style="zoom:80%;" />
