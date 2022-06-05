@@ -35,7 +35,7 @@ class Checker(object):
         """
         Check the word spelling and return the corrected word.
         """
-        if '*' in word:
+        if '*' in word or len(word) == 1:
             return word
 
         if metric == 'jaccard_dist':
@@ -60,7 +60,7 @@ if __name__ == '__main__':
     correct_words = words.words()
     # list of incorrect spellings
     # that need to be corrected
-    incorrect_words = ['pwople', 'happpy', 'azmaing', 'intelliengt', 'rodwer']
+    incorrect_words = ['pwople', 'happpy', 'azmaing', 'intelliengt', 'rodwer', "a"]
 
     print(incorrect_words)
     print('After correction->')
