@@ -290,6 +290,11 @@ class QueryResults():
             # page_freq[token] = len(posting)
             page_freq[token] = freq
             page_postings[token][field_name] = posting
+
+        if not all_cand_tokens:
+            final_results.append([page_freq, page_postings])
+            return final_results
+
         for field, cand_tokens in all_cand_tokens:
             cand_page_freq, cand_page_postings = page_freq.copy(), page_postings.copy()
             token, *token_info = cand_tokens
@@ -551,6 +556,7 @@ class RunQuery():
             query = Checker.query_spell_check(query)
             print(f'After spell correction:- {query}')
             query1, query2 = self.identify_query_type(query)
+            print(query1, query2)
 
             if query2:
                 ranked_results1, relevant_tokens1 = self.return_query_results(query1, 'simple')
