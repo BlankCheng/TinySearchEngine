@@ -121,7 +121,15 @@ class CategoryInfo(object):
         pageids = linecache.getline(osp.join(self.data_folder, "tree", "processed_cat_postings", f"{file_num}.txt"),
                                      line_num + 1)
         pageids = pageids.split("-", 1)[1].split(";")
-        pageids = [int(item) for item in pageids]
+        pageids_ = []
+        for item in pageids:
+            try:
+                item = int(item)
+                pageids_.append(item)
+            except:
+                pass
+        pageids = pageids_
+        # pageids = [int(item) for item in pageids]
         # print(len(pageids))
         return pageids
 
